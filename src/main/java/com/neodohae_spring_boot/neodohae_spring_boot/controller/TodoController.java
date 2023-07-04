@@ -1,12 +1,14 @@
 package com.neodohae_spring_boot.neodohae_spring_boot.controller;
 
-import com.neodohae_spring_boot.neodohae_spring_boot.dtos.TodoDto;
+import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoDto;
+import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoResponse;
 import com.neodohae_spring_boot.neodohae_spring_boot.service.TodoService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import static com.neodohae_spring_boot.neodohae_spring_boot.utils.AppConstants.*;
 
 @RestController
 @RequestMapping("/api/todos")
@@ -20,14 +22,18 @@ public class TodoController {
 
     // create todo
     @PostMapping
-    public ResponseEntity<TodoDto> createTodo(@RequestBody TodoDto todoDto) {
+    public ResponseEntity<TodoDto> createTodo(@Valid @RequestBody TodoDto todoDto) {
         return new ResponseEntity<>(todoService.createTodo(todoDto), HttpStatus.CREATED);
     }
 
     // get all todos
     @GetMapping
-    public ResponseEntity<List<TodoDto>> getAllTodos() {
-        return ResponseEntity.ok(todoService.getAllTodos());
+    public ResponseEntity<TodoResponse> getAllTodos(
+            @RequestParam(value = "pageNo", defaultValue = DEFAULT_PAGE_NUMBER, required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = DEFAULT_PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = DEFAULT_SORT_BY, required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = DEFAULT_SORT_DIRECTION, required = false) String sortDir) {
+        return ResponseEntity.ok(todoService.getAllTodos(pageNo, pageSize, sortBy, sortDir));
     }
 
     // get todo by id
@@ -38,7 +44,7 @@ public class TodoController {
 
     // update todo
     @PutMapping("/{id}")
-    public ResponseEntity<TodoDto> updateTodo(@RequestBody TodoDto todoDto, @PathVariable Long id) {
+    public ResponseEntity<TodoDto> updateTodo(@Valid @RequestBody TodoDto todoDto, @PathVariable Long id) {
         return ResponseEntity.ok(todoService.updateTodo(todoDto, id));
     }
 

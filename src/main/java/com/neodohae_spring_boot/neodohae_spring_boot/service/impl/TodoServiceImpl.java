@@ -1,10 +1,16 @@
 package com.neodohae_spring_boot.neodohae_spring_boot.service.impl;
 
-import com.neodohae_spring_boot.neodohae_spring_boot.dtos.TodoDto;
+import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoDto;
+import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoResponse;
 import com.neodohae_spring_boot.neodohae_spring_boot.exception.ResourceNotFoundException;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.Todo;
 import com.neodohae_spring_boot.neodohae_spring_boot.repository.TodoRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.service.TodoService;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,24 +21,22 @@ public class TodoServiceImpl implements TodoService {
 
     private TodoRepository todoRepository;
 
-    public TodoServiceImpl(TodoRepository todoRepository) {
+    private ModelMapper mapper;
+
+    public TodoServiceImpl(TodoRepository todoRepository, ModelMapper mapper) {
         this.todoRepository = todoRepository;
+        this.mapper = mapper;
     }
 
     // convert DTO to Entity
     private Todo mapToModel(TodoDto todoDto) {
-        Todo todo = new Todo();
-        todo.setTitle(todoDto.getTitle());
-        todo.setDescription(todoDto.getDescription());
+        Todo todo = mapper.map(todoDto, Todo.class);
         return todo;
     }
 
     // convert Entity into DTO
     private TodoDto mapToDTO(Todo todo) {
-        TodoDto todoDto = new TodoDto();
-        todoDto.setId(todo.getId());
-        todoDto.setTitle(todo.getTitle());
-        todoDto.setDescription(todo.getDescription());
+        TodoDto todoDto = mapper.map(todo, TodoDto.class);
         return todoDto;
     }
 
@@ -47,11 +51,33 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public List<TodoDto> getAllTodos() {
-        // returns list of Todo Entity
-        List<Todo> todos = todoRepository.findAll();
+    public TodoResponse getAllTodos(int pageNo, int pageSize, String sortBy, String sortDir) {
+        // set sorting direction : asc or desc
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        // create Pageable Instance
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+
+        // returns page object (page of todos)
+        Page<Todo> todos = todoRepository.findAll(pageable);
+
+        // get content for page object
+        // to retrieve a list of object from the page object
+        List<Todo> listOfTodos = todos.getContent();
+
         // convert list of Entity to list of DTO
-        return todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+        List<TodoDto> contents = listOfTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+
+        TodoResponse todoResponse = new TodoResponse();
+        todoResponse.setContent(contents);
+        todoResponse.setPageNo(todos.getNumber());
+        todoResponse.setPageSize(todos.getSize());
+        todoResponse.setTotalElements(todos.getTotalElements());
+        todoResponse.setTotalPages(todos.getTotalPages());
+        todoResponse.setLast(todos.isLast());
+
+        return todoResponse;
     }
 
     @Override
@@ -69,6 +95,8 @@ public class TodoServiceImpl implements TodoService {
         // update todo using todoDto
         todo.setTitle(todoDto.getTitle());
         todo.setDescription(todoDto.getDescription());
+        todo.setStartDateTime(todoDto.getStartDateTime());
+        todo.setEndDateTime(todoDto.getEndDateTime());
 
         // save updated todo
         Todo updatedTodo = todoRepository.save(todo);

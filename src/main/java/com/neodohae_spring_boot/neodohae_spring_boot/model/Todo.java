@@ -1,24 +1,17 @@
 package com.neodohae_spring_boot.neodohae_spring_boot.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.text.DateFormat;
+import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(
-        name = "todos",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        columnNames = "title"
-                )
-        }
-)
+@Table(name = "todos")
 public class Todo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,4 +22,10 @@ public class Todo {
 
     @Column(nullable = false)
     private String description;
+
+    @Column(name = "start_date_time", nullable = false)
+    private LocalDateTime startDateTime;
+
+    @Column(name = "end_date_time", nullable = false)
+    private LocalDateTime endDateTime;
 }
