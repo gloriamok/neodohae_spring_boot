@@ -7,10 +7,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class ResourceNotFoundException extends RuntimeException {
     private String resourceName;
     private String fieldName;
-    private Long fieldValue;
+    private Integer fieldValue;
 
 
-    public ResourceNotFoundException(String resourceName, String fieldName, Long fieldValue) {
+    public ResourceNotFoundException(String resourceName, String fieldName, Integer fieldValue) {
         // ex) Todo not found with id : 1
         super(String.format("%s not found with %s : '%s'", resourceName, fieldName, fieldValue));
         this.resourceName = resourceName;
@@ -26,7 +26,7 @@ public class ResourceNotFoundException extends RuntimeException {
         return fieldName;
     }
 
-    public Long getFieldValue() {
+    public Integer getFieldValue() {
         return fieldValue;
     }
 }

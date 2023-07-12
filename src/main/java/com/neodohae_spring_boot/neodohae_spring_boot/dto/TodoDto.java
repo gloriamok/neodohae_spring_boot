@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class TodoDto {
-    private Long id;
+    private Integer id;
     // title should not be null or empty
     // title should have at least 2 characters
     @NotEmpty
@@ -22,4 +22,9 @@ public class TodoDto {
     private LocalDateTime startDateTime;
     @NotNull
     private LocalDateTime endDateTime;
+    private String status;
+    private Integer repeatGroupId;
+    @NotNull
+    private LocalDateTime repeatEndDateTime = LocalDateTime.parse("2030-01-01T12:00:00");
+    private String repeatType;
 }

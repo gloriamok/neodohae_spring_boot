@@ -6,12 +6,15 @@ import com.neodohae_spring_boot.neodohae_spring_boot.service.TodoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import static com.neodohae_spring_boot.neodohae_spring_boot.utils.AppConstants.*;
 
 @RestController
-@RequestMapping("/api/todos")
+@RequestMapping("/api")
 public class TodoController {
 
     private TodoService todoService;
@@ -21,13 +24,13 @@ public class TodoController {
     }
 
     // create todo
-    @PostMapping
-    public ResponseEntity<TodoDto> createTodo(@Valid @RequestBody TodoDto todoDto) {
-        return new ResponseEntity<>(todoService.createTodo(todoDto), HttpStatus.CREATED);
+    @PostMapping("/rooms/{roomId}/users/{userId}/todos")
+    public ResponseEntity<List<TodoDto>> createTodo(@PathVariable Integer roomId, @PathVariable Integer userId, @Valid @RequestBody TodoDto todoDto) {
+        return new ResponseEntity<>(todoService.createTodo(roomId, userId, todoDto), HttpStatus.CREATED);
     }
 
     // get all todos
-    @GetMapping
+    @GetMapping("/todos")
     public ResponseEntity<TodoResponse> getAllTodos(
             @RequestParam(value = "pageNo", defaultValue = DEFAULT_PAGE_NUMBER, required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = DEFAULT_PAGE_SIZE, required = false) int pageSize,
@@ -36,22 +39,48 @@ public class TodoController {
         return ResponseEntity.ok(todoService.getAllTodos(pageNo, pageSize, sortBy, sortDir));
     }
 
+    // get all todos by room id
+    @GetMapping("/rooms/{roomId}/todos")
+    public ResponseEntity<List<TodoDto>> getTodosByRoomId(@PathVariable Integer roomId) {
+        return ResponseEntity.ok(todoService.getTodosByRoomId(roomId));
+    }
+
+    // get all todos by room id and user id
+    @GetMapping("/rooms/{roomId}/users/{userId}/todos")
+    public ResponseEntity<List<TodoDto>> getTodosByRoomIdAndUserId(@PathVariable Integer roomId, @PathVariable Integer userId) {
+        return ResponseEntity.ok(todoService.getTodosByRoomIdAndUserId(roomId, userId));
+    }
+
     // get todo by id
-    @GetMapping("/{id}")
-    public ResponseEntity<TodoDto> getTodoById(@PathVariable Long id) {
-        return ResponseEntity.ok(todoService.getTodoById(id));
+    @GetMapping("/rooms/{roomId}/users/{userId}/todos/{id}")
+    public ResponseEntity<TodoDto> getTodoById(@PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
+        return ResponseEntity.ok(todoService.getTodoById(roomId, userId, id));
     }
 
-    // update todo
-    @PutMapping("/{id}")
-    public ResponseEntity<TodoDto> updateTodo(@Valid @RequestBody TodoDto todoDto, @PathVariable Long id) {
-        return ResponseEntity.ok(todoService.updateTodo(todoDto, id));
+    // update single todo by id
+    @PutMapping("/rooms/{roomId}/users/{userId}/todos/{id}")
+    public ResponseEntity<TodoDto> updateTodo(@RequestBody TodoDto todoDto, @PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
+        return ResponseEntity.ok(todoService.updateTodo(todoDto, roomId, userId, id));
     }
 
-    // delete todo by id
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteTodo(@PathVariable Long id) {
-        todoService.deleteTodoById(id);
+    // update todos by RepeatId
+    @PutMapping("/rooms/{roomId}/users/{userId}/todos/{id}/all")
+    public ResponseEntity<List<TodoDto>> updateTodosByRepeatId(@RequestBody TodoDto todoDto, @PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
+        return ResponseEntity.ok(todoService.updateTodosByRepeatId(todoDto, roomId, userId, id));
+    }
+
+    // delete single todo by id
+    @DeleteMapping("/rooms/{roomId}/users/{userId}/todos/{id}")
+    public ResponseEntity<String> deleteTodo(@PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
+        todoService.deleteTodo(roomId, userId, id);
         return ResponseEntity.ok("Todo entity deleted successfully!");
     }
+
+    // delete todos by RepeatId
+    @DeleteMapping("/rooms/{roomId}/users/{userId}/todos/{id}/all")
+    public ResponseEntity<String> deleteTodosByRepeatId(@PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
+        todoService.deleteTodosByRepeatId(roomId, userId, id);
+        return ResponseEntity.ok("The todo and all future todos deleted successfully!");
+    }
+
 }
