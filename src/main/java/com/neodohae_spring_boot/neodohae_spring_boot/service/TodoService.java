@@ -13,6 +13,7 @@ public interface TodoService {
     TodoDto getTodoById(Integer roomId, Integer userId, Integer id);
     TodoDto updateTodo(TodoDto todoDto, Integer roomId, Integer userId, Integer id);
     List<TodoDto> updateTodosByRepeatId(TodoDto todoDto, Integer roomId, Integer userId, Integer id);
+    TodoDto updateTodoStatus(TodoDto todoDto, Integer roomId, Integer userId, Integer id);
     void deleteTodo(Integer roomId, Integer userId, Integer id);
     void deleteTodosByRepeatId(Integer roomId, Integer userId, Integer id);
 }

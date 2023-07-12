@@ -66,6 +66,12 @@ public class Todo {
     @JoinColumn(name = "userId")
     private User user;
 
+    public enum Status {
+        TODO,
+        DOING,
+        DONE
+    }
+
     public enum RepeatType {
         NONE,
         DAILY,
@@ -73,10 +79,6 @@ public class Todo {
         MONTHLY,
         YEARLY
     }
+
 }
 
-enum Status {
-    TODO,
-    DOING,
-    DONE
-}

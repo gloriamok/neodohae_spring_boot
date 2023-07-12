@@ -22,9 +22,10 @@ public class TodoDto {
     private LocalDateTime startDateTime;
     @NotNull
     private LocalDateTime endDateTime;
+    @NotEmpty
     private String status;
     private Integer repeatGroupId;
-    @NotNull
-    private LocalDateTime repeatEndDateTime = LocalDateTime.parse("2030-01-01T12:00:00");
+    private LocalDateTime repeatEndDateTime;
+    @NotEmpty
     private String repeatType;
 }

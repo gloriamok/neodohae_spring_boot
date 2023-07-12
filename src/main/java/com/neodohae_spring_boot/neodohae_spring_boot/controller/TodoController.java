@@ -58,7 +58,7 @@ public class TodoController {
     }
 
     // update single todo by id
-    @PutMapping("/rooms/{roomId}/users/{userId}/todos/{id}")
+    @PutMapping("/rooms/{roomId}/users/{userId}/todos/{id}/single")
     public ResponseEntity<TodoDto> updateTodo(@RequestBody TodoDto todoDto, @PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
         return ResponseEntity.ok(todoService.updateTodo(todoDto, roomId, userId, id));
     }
@@ -67,6 +67,12 @@ public class TodoController {
     @PutMapping("/rooms/{roomId}/users/{userId}/todos/{id}/all")
     public ResponseEntity<List<TodoDto>> updateTodosByRepeatId(@RequestBody TodoDto todoDto, @PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
         return ResponseEntity.ok(todoService.updateTodosByRepeatId(todoDto, roomId, userId, id));
+    }
+
+    // update todo's status only
+    @PutMapping("/rooms/{roomId}/users/{userId}/todos/{id}/status")
+    public ResponseEntity<TodoDto> updateTodoStatus(@RequestBody TodoDto todoDto, @PathVariable Integer roomId, @PathVariable Integer userId, @PathVariable Integer id) {
+        return ResponseEntity.ok(todoService.updateTodoStatus(todoDto, roomId, userId, id));
     }
 
     // delete single todo by id

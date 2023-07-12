@@ -24,7 +24,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,6 +96,7 @@ public class TodoServiceImpl implements TodoService {
                 Todo todo = mapToModel(todoDto);
                 todo.setStartDateTime(date);
                 todo.setEndDateTime(todoDto.getEndDateTime().plusDays(ChronoUnit.DAYS.between(start_date, date)));
+                todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
                 todo.setRoom(room);
                 todo.setUser(user);
@@ -116,6 +116,7 @@ public class TodoServiceImpl implements TodoService {
                 Todo todo = mapToModel(todoDto);
                 todo.setStartDateTime(date);
                 todo.setEndDateTime(todoDto.getEndDateTime().plusWeeks(ChronoUnit.WEEKS.between(start_date, date)));
+                todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
                 todo.setRoom(room);
                 todo.setUser(user);
@@ -135,6 +136,7 @@ public class TodoServiceImpl implements TodoService {
                 Todo todo = mapToModel(todoDto);
                 todo.setStartDateTime(date);
                 todo.setEndDateTime(todoDto.getEndDateTime().plusMonths(ChronoUnit.MONTHS.between(start_date, date)));
+                todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
                 todo.setRoom(room);
                 todo.setUser(user);
@@ -154,6 +156,7 @@ public class TodoServiceImpl implements TodoService {
                 Todo todo = mapToModel(todoDto);
                 todo.setStartDateTime(date);
                 todo.setEndDateTime(todoDto.getEndDateTime().plusYears(ChronoUnit.YEARS.between(start_date, date)));
+                todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
                 todo.setRoom(room);
                 todo.setUser(user);
@@ -182,6 +185,8 @@ public class TodoServiceImpl implements TodoService {
         if (todoDto.getStartDateTime().isAfter(todoDto.getEndDateTime())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The start date cannot be later than the end date. Please enter a valid date range.");
         }
+
+        if (todoDto.getRepeatEndDateTime() == null) todoDto.setEndDateTime(LocalDateTime.parse("2030-01-01T12:00:00"));
 
         Todo pTodo = mapToModel(todoDto);
         pTodo.setRoom(room);
@@ -295,6 +300,7 @@ public class TodoServiceImpl implements TodoService {
 
         if (todoDto.getTitle() != null) todo.setTitle(todoDto.getTitle());
         if (todoDto.getDescription() != null) todo.setDescription(todoDto.getDescription());
+        if (todoDto.getStatus() != null) todo.setStatus(Todo.Status.valueOf(todoDto.getStatus()));
         todo.setRepeatType(RepeatType.NONE);
         todo.setRepeatGroupId(null);
 
@@ -333,6 +339,12 @@ public class TodoServiceImpl implements TodoService {
 
         if (todoDto.getTitle() == null) todoDto.setTitle(todo.getTitle());
         if (todoDto.getDescription() == null) todoDto.setDescription(todo.getDescription());
+        // 확인
+        if (todoDto.getStatus() == null) {
+            System.out.println("TODODTO NULL");
+            todoDto.setStatus(todo.getStatus().toString());
+        }
+        else System.out.println(todoDto.getStatus());
 
         if (todoDto.getRepeatEndDateTime() == null) todoDto.setRepeatEndDateTime(todo.getRepeatEndDateTime());
         if (todoDto.getRepeatType() == null) todoDto.setRepeatType(todo.getRepeatType().toString());
@@ -375,6 +387,15 @@ public class TodoServiceImpl implements TodoService {
 
         // convert list of todos to list of todo dtos
         return newTodos.stream().map(newTodo -> mapToDTO(newTodo)).collect(Collectors.toList());
+    }
+
+    @Override
+    public TodoDto updateTodoStatus(TodoDto todoDto, Integer roomId, Integer userId, Integer id) {
+        Todo todo = validateTodoOwnership(roomId, userId, id);
+        todo.setStatus(Todo.Status.valueOf(todoDto.getStatus()));
+        // save updated todo to DB
+        Todo updatedTodo = todoRepository.save(todo);
+        return mapToDTO(updatedTodo);
     }
 
     @Override
