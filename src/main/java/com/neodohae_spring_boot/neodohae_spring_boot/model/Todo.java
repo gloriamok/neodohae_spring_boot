@@ -7,8 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
-
+import java.util.Set;
 
 @Getter
 @Setter
@@ -65,6 +64,9 @@ public class Todo {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "userId")
     private User user;
+
+    @OneToMany(mappedBy = "todo", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private Set<TodoUserMap> todoUserMaps;
 
     public enum Status {
         TODO,

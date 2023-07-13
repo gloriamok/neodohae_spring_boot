@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 @Data
 public class TodoDto {
@@ -28,4 +30,6 @@ public class TodoDto {
     private LocalDateTime repeatEndDateTime;
     @NotEmpty
     private String repeatType;
+
+    private Set<Integer> assignedUserIds;
 }

@@ -8,9 +8,11 @@ import com.neodohae_spring_boot.neodohae_spring_boot.model.Todo.RepeatType;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.Room;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.Todo;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.User;
+import com.neodohae_spring_boot.neodohae_spring_boot.model.TodoUserMap;
 import com.neodohae_spring_boot.neodohae_spring_boot.repository.RoomRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.repository.TodoRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.repository.UserRepository;
+import com.neodohae_spring_boot.neodohae_spring_boot.repository.TodoUserMapRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.service.TodoService;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -23,7 +25,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,12 +36,15 @@ public class TodoServiceImpl implements TodoService {
     private TodoRepository todoRepository;
     private UserRepository userRepository;
     private RoomRepository roomRepository;
+
+    private TodoUserMapRepository todoUserMapRepository;
     private ModelMapper mapper;
 
-    public TodoServiceImpl(TodoRepository todoRepository, UserRepository userRepository, RoomRepository roomRepository, ModelMapper mapper) {
+    public TodoServiceImpl(TodoRepository todoRepository, UserRepository userRepository, RoomRepository roomRepository, TodoUserMapRepository todoUserMapRepository, ModelMapper mapper) {
         this.todoRepository = todoRepository;
         this.userRepository = userRepository;
         this.roomRepository = roomRepository;
+        this.todoUserMapRepository = todoUserMapRepository;
         this.mapper = mapper;
     }
 
@@ -214,7 +221,62 @@ public class TodoServiceImpl implements TodoService {
         }
 
         // convert list of todos to list of todo dtos
-        return newTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+        List<TodoDto> newTodoDtos = newTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+
+
+        // assignedUserIds -> todoId - userId mapping
+        int i = 0;
+        for(Todo todo : newTodos) {
+            List<TodoUserMap> todoUserMaps = new ArrayList<>();
+            for(Integer uid : todoDto.getAssignedUserIds()) {
+                TodoUserMap todoUserMap = new TodoUserMap();
+                todoUserMap.setTodo(todo);
+                // retrieve user entity by id
+                User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
+                // check if the assignedUser belongs to the room
+                if (!assignedUser.getRoom().getId().equals(room.getId())) {
+                    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+                }
+                todoUserMap.setUser(assignedUser);
+                todoUserMaps.add(todoUserMap);
+            }
+            List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
+
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+
+            for(TodoUserMap todoUserMap : newTodoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
+            i++;
+        }
+
+        /*
+        // assignedUserIds -> todoId - userId mapping
+        List<TodoUserMap> todoUserMaps = new ArrayList<>();
+        for(Integer uid : todoDto.getAssignedUserIds()) {
+            TodoUserMap todoUserMap = new TodoUserMap();
+            todoUserMap.setTodo(parentTodo);
+            // retrieve user entity by id
+            User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
+            todoUserMap.setUser(assignedUser);
+            todoUserMaps.add(todoUserMap);
+        }
+        List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
+
+        Set<Integer> newAssignedUserIds = new HashSet<>();
+
+        for(TodoUserMap todoUserMap : newTodoUserMaps) {
+            newAssignedUserIds.add(todoUserMap.getUser().getId());
+        }
+
+        // convert list of todos to list of todo dtos
+        List<TodoDto> newTodoDtos = newTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+
+        newTodoDtos.get(0).setAssignedUserIds(newAssignedUserIds);
+         */
+
+        return newTodoDtos;
     }
 
     @Override
@@ -255,7 +317,18 @@ public class TodoServiceImpl implements TodoService {
         List<Todo> todos = todoRepository.findByRoomId(roomId);
 
         // convert list of todos to list of todo dtos
-        return todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+        List<TodoDto> todoDtos = todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+
+        // convert set of todoUserMaps to set of assignedUserIds
+        for(TodoDto todoDto : todoDtos) {
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+            for(TodoUserMap todoUserMap : todoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            todoDto.setAssignedUserIds(newAssignedUserIds);
+        }
+        return todoDtos;
     }
 
     public List<TodoDto> getTodosByRoomIdAndUserId(Integer roomId, Integer userId) {
@@ -274,7 +347,18 @@ public class TodoServiceImpl implements TodoService {
         List<Todo> todos = todoRepository.findByRoomIdAndUserId(roomId, userId);
 
         // convert list of todos to list of todo dtos
-        return todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+        List<TodoDto> todoDtos = todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
+
+        // convert set of todoUserMaps to set of assignedUserIds
+        for(TodoDto todoDto : todoDtos) {
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+            for(TodoUserMap todoUserMap : todoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            todoDto.setAssignedUserIds(newAssignedUserIds);
+        }
+        return todoDtos;
     }
 
     @Override
@@ -282,7 +366,16 @@ public class TodoServiceImpl implements TodoService {
 
         Todo todo = validateTodoOwnership(roomId, userId, id);
 
-        return mapToDTO(todo);
+        TodoDto todoDto = mapToDTO(todo);
+
+        Set<Integer> newAssignedUserIds = new HashSet<>();
+        Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+        for(TodoUserMap todoUserMap : todoUserMaps) {
+            newAssignedUserIds.add(todoUserMap.getUser().getId());
+        }
+        todoDto.setAssignedUserIds(newAssignedUserIds);
+
+        return todoDto;
     }
 
     @Override
@@ -306,7 +399,48 @@ public class TodoServiceImpl implements TodoService {
 
         // save updated todo
         Todo updatedTodo = todoRepository.save(todo);
-        return mapToDTO(updatedTodo);
+
+        TodoDto newTodoDto = mapToDTO(updatedTodo);
+
+        if (todoDto.getAssignedUserIds() != null) {
+            // 기존 todo - user 맵핑 제거
+            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            todoUserMapRepository.deleteAll(todoUserMaps);
+
+            // AssignedUserIds로 새로운 todo - user 맵핑 생성
+            Set<TodoUserMap> newTodoUserMaps = new HashSet<>();
+            for(Integer uid : todoDto.getAssignedUserIds()) {
+                TodoUserMap todoUserMap = new TodoUserMap();
+                todoUserMap.setTodo(todo);
+                // retrieve user entity by id
+                User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
+                // check if the assignedUser belongs to the room
+                if (!assignedUser.getRoom().getId().equals(todo.getRoom().getId())) {
+                    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+                }
+                todoUserMap.setUser(assignedUser);
+                newTodoUserMaps.add(todoUserMap);
+            }
+            List<TodoUserMap> updatedTodoUserMaps = todoUserMapRepository.saveAll(newTodoUserMaps);
+
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+
+            for(TodoUserMap todoUserMap : updatedTodoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            newTodoDto.setAssignedUserIds(newAssignedUserIds);
+        }
+        else {
+            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+
+            for(TodoUserMap todoUserMap : todoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            newTodoDto.setAssignedUserIds(newAssignedUserIds);
+        }
+
+        return newTodoDto;
     }
 
     @Override
@@ -386,7 +520,47 @@ public class TodoServiceImpl implements TodoService {
         }
 
         // convert list of todos to list of todo dtos
-        return newTodos.stream().map(newTodo -> mapToDTO(newTodo)).collect(Collectors.toList());
+        List<TodoDto> newTodoDtos = newTodos.stream().map(newTodo -> mapToDTO(newTodo)).collect(Collectors.toList());
+
+        // todoDto.getAssignedUserIds()가 null이면 todo에서 가져와서 지정해줌
+        if (todoDto.getAssignedUserIds() == null) {
+            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+
+            for(TodoUserMap todoUserMap : todoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            todoDto.setAssignedUserIds(newAssignedUserIds);
+        }
+
+        // assignedUserIds -> todoId - userId mapping
+        int i = 0;
+        for(Todo newTodo : newTodos) {
+            List<TodoUserMap> todoUserMaps = new ArrayList<>();
+            for(Integer uid : todoDto.getAssignedUserIds()) {
+                TodoUserMap todoUserMap = new TodoUserMap();
+                todoUserMap.setTodo(newTodo);
+                // retrieve user entity by id
+                User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
+                // check if the assignedUser belongs to the room
+                if (!assignedUser.getRoom().getId().equals(room.getId())) {
+                    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+                }
+                todoUserMap.setUser(assignedUser);
+                todoUserMaps.add(todoUserMap);
+            }
+            List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
+
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+
+            for(TodoUserMap todoUserMap : newTodoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
+            i++;
+        }
+
+        return newTodoDtos;
     }
 
     @Override
