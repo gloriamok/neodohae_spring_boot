@@ -24,10 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,6 +77,7 @@ public class TodoServiceImpl implements TodoService {
         return todo;
     }
 
+    /*
     private List<Todo> createSingleTodo(Room room, User user, TodoDto todoDto) {
         List<Todo> todos = new ArrayList<>();
         // convert DTO to entity
@@ -93,6 +91,7 @@ public class TodoServiceImpl implements TodoService {
 
         return todos;
     }
+     */
 
     private List<Todo> createDailyTodos(Room room, User user, TodoDto todoDto, Todo parentTodo) {
         List<Todo> todos = new ArrayList<>();
@@ -193,7 +192,7 @@ public class TodoServiceImpl implements TodoService {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The start date cannot be later than the end date. Please enter a valid date range.");
         }
 
-        if (todoDto.getRepeatEndDateTime() == null) todoDto.setEndDateTime(LocalDateTime.parse("2030-01-01T12:00:00"));
+        if (todoDto.getRepeatEndDateTime() == null) todoDto.setRepeatEndDateTime(LocalDateTime.parse("2030-01-01T12:00:00"));
 
         Todo pTodo = mapToModel(todoDto);
         pTodo.setRoom(room);
@@ -223,7 +222,74 @@ public class TodoServiceImpl implements TodoService {
         // convert list of todos to list of todo dtos
         List<TodoDto> newTodoDtos = newTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
 
+        // random or not
+        if(todoDto.getRandomUsersNum() == null || todoDto.getRandomUsersNum().equals(0)) {
+            // assignedUserIds -> todoId - userId mapping
+            if (todoDto.getAssignedUserIds() == null || todoDto.getAssignedUserIds().equals("")) {
+                todoDto.setAssignedUserIds(Collections.singleton(userId));
+            }
+            int i = 0;
+            for(Todo todo : newTodos) {
+                List<TodoUserMap> todoUserMaps = new ArrayList<>();
+                for(Integer uid : todoDto.getAssignedUserIds()) {
+                    TodoUserMap todoUserMap = new TodoUserMap();
+                    todoUserMap.setTodo(todo);
+                    // retrieve user entity by id
+                    User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
+                    // check if the assignedUser belongs to the room
+                    if (!assignedUser.getRoom().getId().equals(room.getId())) {
+                        throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+                    }
+                    todoUserMap.setUser(assignedUser);
+                    todoUserMaps.add(todoUserMap);
+                }
+                List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
 
+                Set<Integer> newAssignedUserIds = new HashSet<>();
+
+                for(TodoUserMap todoUserMap : newTodoUserMaps) {
+                    newAssignedUserIds.add(todoUserMap.getUser().getId());
+                }
+                newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
+                i++;
+            }
+        }
+        else if (todoDto.getRandomUsersNum() != null && !todoDto.getRandomUsersNum().equals(0)) {
+            // assign user ramdomly
+            // numRandomUsers & random -> todoId - userId mapping
+            Integer randomUsersNum = todoDto.getRandomUsersNum();
+
+            int i=0;
+            for(Todo todo : newTodos) {
+                List<User> users = userRepository.findByRoomId(room.getId());
+                List<TodoUserMap> todoUserMaps = new ArrayList<>();
+                for (int j=1;j<=randomUsersNum;j++) {
+                    Random random = new Random();
+                    int randomIdx = random.nextInt(users.size());
+                    User randomUser = users.get(randomIdx);
+                    // 한 번 선택한 user는 다시 선택 불가능하게 users에서 제거
+                    users.remove(randomIdx);
+
+                    TodoUserMap todoUserMap = new TodoUserMap();
+                    todoUserMap.setTodo(todo);
+                    todoUserMap.setUser(randomUser);
+                    todoUserMaps.add(todoUserMap);
+                }
+                List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
+
+                Set<Integer> newAssignedUserIds = new HashSet<>();
+
+                for(TodoUserMap todoUserMap : newTodoUserMaps) {
+                    newAssignedUserIds.add(todoUserMap.getUser().getId());
+                }
+                newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
+                newTodoDtos.get(i).setRandomUsersNum(randomUsersNum);
+                i++;
+            }
+        }
+
+        /*
+        // random 없을 때
         // assignedUserIds -> todoId - userId mapping
         int i = 0;
         for(Todo todo : newTodos) {
@@ -250,8 +316,10 @@ public class TodoServiceImpl implements TodoService {
             newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
             i++;
         }
+         */
 
         /*
+        // **TEST** assign user to "single" todo
         // assignedUserIds -> todoId - userId mapping
         List<TodoUserMap> todoUserMaps = new ArrayList<>();
         for(Integer uid : todoDto.getAssignedUserIds()) {
@@ -368,6 +436,7 @@ public class TodoServiceImpl implements TodoService {
 
         TodoDto todoDto = mapToDTO(todo);
 
+        // convert set of todoUserMaps to set of assignedUserIds
         Set<Integer> newAssignedUserIds = new HashSet<>();
         Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
         for(TodoUserMap todoUserMap : todoUserMaps) {
@@ -402,24 +471,48 @@ public class TodoServiceImpl implements TodoService {
 
         TodoDto newTodoDto = mapToDTO(updatedTodo);
 
-        if (todoDto.getAssignedUserIds() != null) {
+        // assignedUserIds에 변경사항 있을 시
+        if (todoDto.getAssignedUserIds() != null || (todoDto.getRandomUsersNum() != null && !todoDto.getRandomUsersNum().equals(0))) {
             // 기존 todo - user 맵핑 제거
             Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
             todoUserMapRepository.deleteAll(todoUserMaps);
 
-            // AssignedUserIds로 새로운 todo - user 맵핑 생성
-            Set<TodoUserMap> newTodoUserMaps = new HashSet<>();
-            for(Integer uid : todoDto.getAssignedUserIds()) {
-                TodoUserMap todoUserMap = new TodoUserMap();
-                todoUserMap.setTodo(todo);
-                // retrieve user entity by id
-                User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
-                // check if the assignedUser belongs to the room
-                if (!assignedUser.getRoom().getId().equals(todo.getRoom().getId())) {
-                    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+            List<TodoUserMap> newTodoUserMaps = new ArrayList<>();
+
+            if (todoDto.getAssignedUserIds() != null) {
+                // AssignedUserIds로 새로운 todo - user 맵핑 생성
+                for(Integer uid : todoDto.getAssignedUserIds()) {
+                    TodoUserMap todoUserMap = new TodoUserMap();
+                    todoUserMap.setTodo(todo);
+                    // retrieve user entity by id
+                    User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
+                    // check if the assignedUser belongs to the room
+                    if (!assignedUser.getRoom().getId().equals(todo.getRoom().getId())) {
+                        throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+                    }
+                    todoUserMap.setUser(assignedUser);
+                    newTodoUserMaps.add(todoUserMap);
                 }
-                todoUserMap.setUser(assignedUser);
-                newTodoUserMaps.add(todoUserMap);
+            }
+            else if (todoDto.getRandomUsersNum() != null && !todoDto.getRandomUsersNum().equals(0)) {
+                // assign user ramdomly
+                // numRandomUsers & random -> todoId - userId mapping
+                Integer randomUsersNum = todoDto.getRandomUsersNum();
+                List<User> users = userRepository.findByRoomId(todo.getRoom().getId());
+
+                for (int j=1;j<=randomUsersNum;j++) {
+                    Random random = new Random();
+                    int randomIdx = random.nextInt(users.size());
+                    User randomUser = users.get(randomIdx);
+                    // 한 번 선택한 user는 다시 선택 불가능하게 users에서 제거
+                    users.remove(randomIdx);
+
+                    TodoUserMap todoUserMap = new TodoUserMap();
+                    todoUserMap.setTodo(todo);
+                    todoUserMap.setUser(randomUser);
+                    newTodoUserMaps.add(todoUserMap);
+                }
+                newTodoDto.setRandomUsersNum(randomUsersNum);
             }
             List<TodoUserMap> updatedTodoUserMaps = todoUserMapRepository.saveAll(newTodoUserMaps);
 
@@ -429,6 +522,8 @@ public class TodoServiceImpl implements TodoService {
                 newAssignedUserIds.add(todoUserMap.getUser().getId());
             }
             newTodoDto.setAssignedUserIds(newAssignedUserIds);
+
+
         }
         else {
             Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
@@ -483,6 +578,19 @@ public class TodoServiceImpl implements TodoService {
         if (todoDto.getRepeatEndDateTime() == null) todoDto.setRepeatEndDateTime(todo.getRepeatEndDateTime());
         if (todoDto.getRepeatType() == null) todoDto.setRepeatType(todo.getRepeatType().toString());
 
+        // todoDto.getAssignedUserIds()와 todoDto.getRandomUsersNum()가 둘 다 null이면
+        // 기존 parentTodo의 id에 해당하는 기존 todoUserMap을 가져와서 todoDto에 setAssignedUserIds
+        // todo를 DB에서 지우면 해당 toddmap도 삭제되므로 todo를 지우기 전에 가져오기
+        if (todoDto.getAssignedUserIds() == null && todoDto.getRandomUsersNum() == null) {
+            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            Set<Integer> newAssignedUserIds = new HashSet<>();
+
+            for(TodoUserMap todoUserMap : todoUserMaps) {
+                newAssignedUserIds.add(todoUserMap.getUser().getId());
+            }
+            todoDto.setAssignedUserIds(newAssignedUserIds);
+        }
+
         if(!todo.getRepeatType().equals(RepeatType.NONE)) {
             Integer repeatGroupId = todo.getId();
             if (todo.getRepeatGroupId() != null) repeatGroupId = todo.getRepeatGroupId();
@@ -522,42 +630,70 @@ public class TodoServiceImpl implements TodoService {
         // convert list of todos to list of todo dtos
         List<TodoDto> newTodoDtos = newTodos.stream().map(newTodo -> mapToDTO(newTodo)).collect(Collectors.toList());
 
-        // todoDto.getAssignedUserIds()가 null이면 todo에서 가져와서 지정해줌
-        if (todoDto.getAssignedUserIds() == null) {
-            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
-            Set<Integer> newAssignedUserIds = new HashSet<>();
 
-            for(TodoUserMap todoUserMap : todoUserMaps) {
-                newAssignedUserIds.add(todoUserMap.getUser().getId());
-            }
-            todoDto.setAssignedUserIds(newAssignedUserIds);
-        }
 
-        // assignedUserIds -> todoId - userId mapping
-        int i = 0;
-        for(Todo newTodo : newTodos) {
-            List<TodoUserMap> todoUserMaps = new ArrayList<>();
-            for(Integer uid : todoDto.getAssignedUserIds()) {
-                TodoUserMap todoUserMap = new TodoUserMap();
-                todoUserMap.setTodo(newTodo);
-                // retrieve user entity by id
-                User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
-                // check if the assignedUser belongs to the room
-                if (!assignedUser.getRoom().getId().equals(room.getId())) {
-                    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+        // random값 없을 때
+        if (todoDto.getAssignedUserIds() != null && todoDto.getRandomUsersNum() == null) {
+            // assignedUserIds -> todoId - userId mapping
+            int i = 0;
+            for (Todo newTodo : newTodos) {
+                List<TodoUserMap> todoUserMaps = new ArrayList<>();
+                for (Integer uid : todoDto.getAssignedUserIds()) {
+                    TodoUserMap todoUserMap = new TodoUserMap();
+                    todoUserMap.setTodo(newTodo);
+                    // retrieve user entity by id
+                    User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User", "id", uid));
+                    // check if the assignedUser belongs to the room
+                    if (!assignedUser.getRoom().getId().equals(room.getId())) {
+                        throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
+                    }
+                    todoUserMap.setUser(assignedUser);
+                    todoUserMaps.add(todoUserMap);
                 }
-                todoUserMap.setUser(assignedUser);
-                todoUserMaps.add(todoUserMap);
-            }
-            List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
+                List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
 
-            Set<Integer> newAssignedUserIds = new HashSet<>();
+                Set<Integer> newAssignedUserIds = new HashSet<>();
 
-            for(TodoUserMap todoUserMap : newTodoUserMaps) {
-                newAssignedUserIds.add(todoUserMap.getUser().getId());
+                for (TodoUserMap todoUserMap : newTodoUserMaps) {
+                    newAssignedUserIds.add(todoUserMap.getUser().getId());
+                }
+                newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
+                i++;
             }
-            newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
-            i++;
+        }
+        // random값 있을 때
+        else if (todoDto.getRandomUsersNum() != null && !todoDto.getRandomUsersNum().equals(0)) {
+            // assign user ramdomly
+            // numRandomUsers & random -> todoId - userId mapping
+            Integer randomUsersNum = todoDto.getRandomUsersNum();
+
+            int i=0;
+            for(Todo newTodo : newTodos) {
+                List<User> users = userRepository.findByRoomId(room.getId());
+                List<TodoUserMap> todoUserMaps = new ArrayList<>();
+                for (int j=1;j<=randomUsersNum;j++) {
+                    Random random = new Random();
+                    int randomIdx = random.nextInt(users.size());
+                    User randomUser = users.get(randomIdx);
+                    // 한 번 선택한 user는 다시 선택 불가능하게 users에서 제거
+                    users.remove(randomIdx);
+
+                    TodoUserMap todoUserMap = new TodoUserMap();
+                    todoUserMap.setTodo(newTodo);
+                    todoUserMap.setUser(randomUser);
+                    todoUserMaps.add(todoUserMap);
+                }
+                List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
+
+                Set<Integer> newAssignedUserIds = new HashSet<>();
+
+                for(TodoUserMap todoUserMap : newTodoUserMaps) {
+                    newAssignedUserIds.add(todoUserMap.getUser().getId());
+                }
+                newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
+                newTodoDtos.get(i).setRandomUsersNum(randomUsersNum);
+                i++;
+            }
         }
 
         return newTodoDtos;

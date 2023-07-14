@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -26,11 +27,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    // get JWT token from the request header
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         // extract jwt token from the string
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7, bearerToken.length());
+            return bearerToken.substring(7);
         }
         return null;
     }
@@ -44,15 +46,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if(StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
             // get username from token (using getUsername method)
             String username = jwtTokenProvider.getUsername(token);
+            System.out.println(username);
 
             // load user object (from the database) associated with token
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            // UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
             // create UsernamePasswordAuthenticationToken class object and add userDetails to it
+            // UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+            //         userDetails,
+            //        null,
+            //        userDetails.getAuthorities()
+            //);
+
+            // create UsernamePasswordAuthenticationToken class object and add username to it
             UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                    userDetails,
+                    username,
                     null,
-                    userDetails.getAuthorities()
+                    new ArrayList<>()
             );
 
             // add request object to authentication token

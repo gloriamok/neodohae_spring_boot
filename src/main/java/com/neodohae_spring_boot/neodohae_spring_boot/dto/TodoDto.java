@@ -32,4 +32,5 @@ public class TodoDto {
     private String repeatType;
 
     private Set<Integer> assignedUserIds;
+    private Integer randomUsersNum;
 }
