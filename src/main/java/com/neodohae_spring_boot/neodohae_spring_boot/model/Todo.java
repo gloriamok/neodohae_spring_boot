@@ -24,14 +24,13 @@ public class Todo {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
     private String description;
 
-    @Column(name = "startDateTime", nullable = false)
-    private LocalDateTime startDateTime;
+    @Column(name = "startTime", nullable = false)
+    private LocalDateTime startTime;
 
-    @Column(name = "endDateTime", nullable = false)
-    private LocalDateTime endDateTime;
+    @Column(name = "endTime", nullable = false)
+    private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -40,8 +39,8 @@ public class Todo {
     @Column(name = "repeatGroupId")
     private Integer repeatGroupId;
 
-    @Column(name = "repeatEndDateTime")
-    private LocalDateTime repeatEndDateTime;
+    @Column(name = "repeatEndTime")
+    private LocalDateTime repeatEndTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "repeatType")
@@ -54,11 +53,6 @@ public class Todo {
     @LastModifiedDate
     @Column(name = "updatedAt")
     private LocalDateTime updatedAt;
-
-    // multiple todos to one room
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "roomId")
-    private Room room;
 
     // multiple todos to one user
     @ManyToOne(fetch = FetchType.EAGER)

@@ -12,25 +12,22 @@ import java.util.Set;
 @Data
 public class TodoDto {
     private Integer id;
-    // title should not be null or empty
-    // title should have at least 2 characters
     @NotEmpty
-    @Size(min = 2, message = "Todo title should have at least 2 characters")
     private String title;
-    // description should not be null or empty
-    @NotEmpty
     private String description;
     @NotNull
-    private LocalDateTime startDateTime;
+    private LocalDateTime startTime;
     @NotNull
-    private LocalDateTime endDateTime;
+    private LocalDateTime endTime;
     @NotEmpty
     private String status;
     private Integer repeatGroupId;
-    private LocalDateTime repeatEndDateTime;
+    private LocalDateTime repeatEndTime;
     @NotEmpty
     private String repeatType;
 
     private Set<Integer> assignedUserIds;
     private Integer randomUsersNum;
+    @NotNull
+    private Integer userId;
 }

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TodoRepository extends JpaRepository<Todo, Integer> {
-    List<Todo> findByRoomId(Integer roomId);
-    List<Todo> findByRoomIdAndUserId(Integer roomId, Integer userId);
+    List<Todo> findByUserId(Integer userId);
     List<Todo> findByRepeatGroupId(Integer repeatGroupId);
 }

@@ -1,19 +1,16 @@
 package com.neodohae_spring_boot.neodohae_spring_boot.service;
 
 import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoDto;
-import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoResponse;
 
 import java.util.List;
 
 public interface TodoService {
-    List<TodoDto> createTodo(Integer roomId, Integer userId, TodoDto todoDto);
-    TodoResponse getAllTodos(int pageNo, int pageSize, String sortBy, String sortDir);
+    List<TodoDto> createTodo(TodoDto todoDto);
     List<TodoDto> getTodosByRoomId(Integer roomId);
-    List<TodoDto> getTodosByRoomIdAndUserId(Integer roomId, Integer userId);
-    TodoDto getTodoById(Integer roomId, Integer userId, Integer id);
-    TodoDto updateTodo(TodoDto todoDto, Integer roomId, Integer userId, Integer id);
-    List<TodoDto> updateTodosByRepeatId(TodoDto todoDto, Integer roomId, Integer userId, Integer id);
-    TodoDto updateTodoStatus(TodoDto todoDto, Integer roomId, Integer userId, Integer id);
-    void deleteTodo(Integer roomId, Integer userId, Integer id);
-    void deleteTodosByRepeatId(Integer roomId, Integer userId, Integer id);
+    List<TodoDto> getTodosByUserId(Integer userId);
+    TodoDto getTodoById(Integer id);
+    TodoDto updateTodo(TodoDto todoDto, Integer id);
+    List<TodoDto> updateTodos(TodoDto todoDto, Integer id);
+    void deleteTodo(Integer id);
+    void deleteTodos(Integer id);
 }

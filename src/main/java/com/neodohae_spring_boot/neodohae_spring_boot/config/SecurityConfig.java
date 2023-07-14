@@ -48,19 +48,9 @@ public class SecurityConfig {
     // SecurityFilterChain은 Spring Security에서 HTTP 요청을 처리하는 필터들의 체인
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // CSRF 보호 기능 비활성화
-        // 모든 HTTP 요청에 대해 인증이 필요
-        //  HTTP Basic 인증 방식을 사용하도록 설정
         http.csrf().disable()
                 .authorizeHttpRequests((authorize) ->
                         authorize.anyRequest().authenticated()
-                        /*
-                        authorize.requestMatchers(HttpMethod.GET, "/api/**").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/**").permitAll()
-                                .requestMatchers(HttpMethod.PUT, "/api/**").permitAll()
-                                .requestMatchers(HttpMethod.DELETE, "/api/**").permitAll()
-                                .anyRequest().authenticated()
-                         */
                 ).exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint)
                 ).sessionManagement(session -> session

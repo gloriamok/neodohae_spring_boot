@@ -1,7 +1,6 @@
 package com.neodohae_spring_boot.neodohae_spring_boot.service.impl;
 
 import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoDto;
-import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoResponse;
 import com.neodohae_spring_boot.neodohae_spring_boot.exception.ResourceNotFoundException;
 import com.neodohae_spring_boot.neodohae_spring_boot.exception.TodoAPIException;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.Todo.RepeatType;
@@ -15,10 +14,6 @@ import com.neodohae_spring_boot.neodohae_spring_boot.repository.UserRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.repository.TodoUserMapRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.service.TodoService;
 import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -55,56 +50,17 @@ public class TodoServiceImpl implements TodoService {
         return mapper.map(todo, TodoDto.class);
     }
 
-    // Room, User, Todo의 유효성을 확인
-    private Todo validateTodoOwnership(Integer roomId, Integer userId, Integer id) {
-        // retrieve room entity by id
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Room","id",roomId));
-
-        // retrieve user entity by id
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User","id",userId));
-
-        // retrieve todo entity by id
-        Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
-
-        // check if the todo belongs to the room and user
-        if (!todo.getRoom().getId().equals(room.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the room");
-        }
-        else if (!todo.getUser().getId().equals(user.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
-        }
-
-        return todo;
-    }
-
-    /*
-    private List<Todo> createSingleTodo(Room room, User user, TodoDto todoDto) {
-        List<Todo> todos = new ArrayList<>();
-        // convert DTO to entity
-        Todo todo = mapToModel(todoDto);
-
-        // set room and user to todo entity
-        todo.setRoom(room);
-        todo.setUser(user);
-
-        todos.add(todo);
-
-        return todos;
-    }
-     */
-
-    private List<Todo> createDailyTodos(Room room, User user, TodoDto todoDto, Todo parentTodo) {
+    private List<Todo> createDailyTodos(User user, TodoDto todoDto, Todo parentTodo) {
         List<Todo> todos = new ArrayList<>();
         todos.add(parentTodo);
-        LocalDateTime start_date = todoDto.getStartDateTime();
-        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndDateTime()); date = date.plusDays(1)) {
+        LocalDateTime start_date = todoDto.getStartTime();
+        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndTime()); date = date.plusDays(1)) {
             if (date != start_date) {
                 Todo todo = mapToModel(todoDto);
-                todo.setStartDateTime(date);
-                todo.setEndDateTime(todoDto.getEndDateTime().plusDays(ChronoUnit.DAYS.between(start_date, date)));
+                todo.setStartTime(date);
+                todo.setEndTime(todoDto.getEndTime().plusDays(ChronoUnit.DAYS.between(start_date, date)));
                 todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
-                todo.setRoom(room);
                 todo.setUser(user);
                 todos.add(todo);
             }
@@ -113,18 +69,17 @@ public class TodoServiceImpl implements TodoService {
         return todoRepository.saveAll(todos);
     }
 
-    private List<Todo> createWeeklyTodos(Room room, User user, TodoDto todoDto, Todo parentTodo) {
+    private List<Todo> createWeeklyTodos(User user, TodoDto todoDto, Todo parentTodo) {
         List<Todo> todos = new ArrayList<>();
         todos.add(parentTodo);
-        LocalDateTime start_date = todoDto.getStartDateTime();
-        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndDateTime()); date = date.plusWeeks(1)) {
+        LocalDateTime start_date = todoDto.getStartTime();
+        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndTime()); date = date.plusWeeks(1)) {
             if (date != start_date) {
                 Todo todo = mapToModel(todoDto);
-                todo.setStartDateTime(date);
-                todo.setEndDateTime(todoDto.getEndDateTime().plusWeeks(ChronoUnit.WEEKS.between(start_date, date)));
+                todo.setStartTime(date);
+                todo.setEndTime(todoDto.getEndTime().plusWeeks(ChronoUnit.WEEKS.between(start_date, date)));
                 todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
-                todo.setRoom(room);
                 todo.setUser(user);
                 todos.add(todo);
             }
@@ -133,18 +88,17 @@ public class TodoServiceImpl implements TodoService {
         return todoRepository.saveAll(todos);
     }
 
-    private List<Todo> createMonthlyTodos(Room room, User user, TodoDto todoDto, Todo parentTodo) {
+    private List<Todo> createMonthlyTodos(User user, TodoDto todoDto, Todo parentTodo) {
         List<Todo> todos = new ArrayList<>();
         todos.add(parentTodo);
-        LocalDateTime start_date = todoDto.getStartDateTime();
-        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndDateTime()); date = date.plusMonths(1)) {
+        LocalDateTime start_date = todoDto.getStartTime();
+        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndTime()); date = date.plusMonths(1)) {
             if (date != start_date) {
                 Todo todo = mapToModel(todoDto);
-                todo.setStartDateTime(date);
-                todo.setEndDateTime(todoDto.getEndDateTime().plusMonths(ChronoUnit.MONTHS.between(start_date, date)));
+                todo.setStartTime(date);
+                todo.setEndTime(todoDto.getEndTime().plusMonths(ChronoUnit.MONTHS.between(start_date, date)));
                 todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
-                todo.setRoom(room);
                 todo.setUser(user);
                 todos.add(todo);
             }
@@ -153,18 +107,17 @@ public class TodoServiceImpl implements TodoService {
         return todoRepository.saveAll(todos);
     }
 
-    private List<Todo> createYearlyTodos(Room room, User user, TodoDto todoDto, Todo parentTodo) {
+    private List<Todo> createYearlyTodos(User user, TodoDto todoDto, Todo parentTodo) {
         List<Todo> todos = new ArrayList<>();
         todos.add(parentTodo);
-        LocalDateTime start_date = todoDto.getStartDateTime();
-        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndDateTime()); date = date.plusYears(1)) {
+        LocalDateTime start_date = todoDto.getStartTime();
+        for(LocalDateTime date = start_date; !date.isAfter(todoDto.getRepeatEndTime()); date = date.plusYears(1)) {
             if (date != start_date) {
                 Todo todo = mapToModel(todoDto);
-                todo.setStartDateTime(date);
-                todo.setEndDateTime(todoDto.getEndDateTime().plusYears(ChronoUnit.YEARS.between(start_date, date)));
+                todo.setStartTime(date);
+                todo.setEndTime(todoDto.getEndTime().plusYears(ChronoUnit.YEARS.between(start_date, date)));
                 todo.setStatus(Todo.Status.TODO);
                 todo.setRepeatGroupId(parentTodo.getId());
-                todo.setRoom(room);
                 todo.setUser(user);
                 todos.add(todo);
             }
@@ -174,28 +127,19 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public List<TodoDto> createTodo(Integer roomId, Integer userId, TodoDto todoDto) {
-
-        // retrieve room entity by id
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Room","id",roomId));
+    public List<TodoDto> createTodo(TodoDto todoDto) {
 
         // retrieve user entity by id
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User","id",userId));
-
-        // check if the user belongs to the room
-        if (!user.getRoom().getId().equals(room.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The user does not belong to the room");
-        }
+        User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",todoDto.getUserId()));
 
         // check if todo has a valid date range
-        if (todoDto.getStartDateTime().isAfter(todoDto.getEndDateTime())) {
+        if (todoDto.getStartTime().isAfter(todoDto.getEndTime())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The start date cannot be later than the end date. Please enter a valid date range.");
         }
 
-        if (todoDto.getRepeatEndDateTime() == null) todoDto.setRepeatEndDateTime(LocalDateTime.parse("2030-01-01T12:00:00"));
+        if (todoDto.getRepeatEndTime() == null) todoDto.setRepeatEndTime(LocalDateTime.parse("2030-01-01T12:00:00"));
 
         Todo pTodo = mapToModel(todoDto);
-        pTodo.setRoom(room);
         pTodo.setUser(user);
         Todo parentTodo = todoRepository.save(pTodo);
 
@@ -203,16 +147,16 @@ public class TodoServiceImpl implements TodoService {
 
         switch (todoDto.getRepeatType()) {
             case "DAILY":
-                newTodos = createDailyTodos(room, user, todoDto, parentTodo);
+                newTodos = createDailyTodos(user, todoDto, parentTodo);
                 break;
             case "WEEKLY":
-                newTodos = createWeeklyTodos(room, user, todoDto, parentTodo);
+                newTodos = createWeeklyTodos(user, todoDto, parentTodo);
                 break;
             case "MONTHLY":
-                newTodos = createMonthlyTodos(room, user, todoDto, parentTodo);
+                newTodos = createMonthlyTodos(user, todoDto, parentTodo);
                 break;
             case "YEARLY":
-                newTodos = createYearlyTodos(room, user, todoDto, parentTodo);
+                newTodos = createYearlyTodos(user, todoDto, parentTodo);
                 break;
             default:
                 newTodos.add(parentTodo);
@@ -226,7 +170,7 @@ public class TodoServiceImpl implements TodoService {
         if(todoDto.getRandomUsersNum() == null || todoDto.getRandomUsersNum().equals(0)) {
             // assignedUserIds -> todoId - userId mapping
             if (todoDto.getAssignedUserIds() == null || todoDto.getAssignedUserIds().equals("")) {
-                todoDto.setAssignedUserIds(Collections.singleton(userId));
+                todoDto.setAssignedUserIds(Collections.singleton(todoDto.getUserId()));
             }
             int i = 0;
             for(Todo todo : newTodos) {
@@ -237,7 +181,7 @@ public class TodoServiceImpl implements TodoService {
                     // retrieve user entity by id
                     User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
                     // check if the assignedUser belongs to the room
-                    if (!assignedUser.getRoom().getId().equals(room.getId())) {
+                    if (!assignedUser.getRoom().getId().equals(user.getRoom().getId())) {
                         throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
                     }
                     todoUserMap.setUser(assignedUser);
@@ -261,7 +205,7 @@ public class TodoServiceImpl implements TodoService {
 
             int i=0;
             for(Todo todo : newTodos) {
-                List<User> users = userRepository.findByRoomId(room.getId());
+                List<User> users = userRepository.findByRoomId(user.getRoom().getId());
                 List<TodoUserMap> todoUserMaps = new ArrayList<>();
                 for (int j=1;j<=randomUsersNum;j++) {
                     Random random = new Random();
@@ -288,101 +232,21 @@ public class TodoServiceImpl implements TodoService {
             }
         }
 
-        /*
-        // random 없을 때
-        // assignedUserIds -> todoId - userId mapping
-        int i = 0;
-        for(Todo todo : newTodos) {
-            List<TodoUserMap> todoUserMaps = new ArrayList<>();
-            for(Integer uid : todoDto.getAssignedUserIds()) {
-                TodoUserMap todoUserMap = new TodoUserMap();
-                todoUserMap.setTodo(todo);
-                // retrieve user entity by id
-                User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
-                // check if the assignedUser belongs to the room
-                if (!assignedUser.getRoom().getId().equals(room.getId())) {
-                    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
-                }
-                todoUserMap.setUser(assignedUser);
-                todoUserMaps.add(todoUserMap);
-            }
-            List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
-
-            Set<Integer> newAssignedUserIds = new HashSet<>();
-
-            for(TodoUserMap todoUserMap : newTodoUserMaps) {
-                newAssignedUserIds.add(todoUserMap.getUser().getId());
-            }
-            newTodoDtos.get(i).setAssignedUserIds(newAssignedUserIds);
-            i++;
-        }
-         */
-
-        /*
-        // **TEST** assign user to "single" todo
-        // assignedUserIds -> todoId - userId mapping
-        List<TodoUserMap> todoUserMaps = new ArrayList<>();
-        for(Integer uid : todoDto.getAssignedUserIds()) {
-            TodoUserMap todoUserMap = new TodoUserMap();
-            todoUserMap.setTodo(parentTodo);
-            // retrieve user entity by id
-            User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
-            todoUserMap.setUser(assignedUser);
-            todoUserMaps.add(todoUserMap);
-        }
-        List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.saveAll(todoUserMaps);
-
-        Set<Integer> newAssignedUserIds = new HashSet<>();
-
-        for(TodoUserMap todoUserMap : newTodoUserMaps) {
-            newAssignedUserIds.add(todoUserMap.getUser().getId());
-        }
-
-        // convert list of todos to list of todo dtos
-        List<TodoDto> newTodoDtos = newTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
-
-        newTodoDtos.get(0).setAssignedUserIds(newAssignedUserIds);
-         */
-
         return newTodoDtos;
-    }
-
-    @Override
-    public TodoResponse getAllTodos(int pageNo, int pageSize, String sortBy, String sortDir) {
-        // set sorting direction : asc or desc
-        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
-
-        // create Pageable Instance
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-
-        // returns page object (page of todos)
-        Page<Todo> todos = todoRepository.findAll(pageable);
-
-        // get content for page object
-        // to retrieve a list of object from the page object
-        List<Todo> listOfTodos = todos.getContent();
-
-        // convert list of Entity to list of DTO
-        List<TodoDto> contents = listOfTodos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
-
-        TodoResponse todoResponse = new TodoResponse();
-        todoResponse.setContent(contents);
-        todoResponse.setPageNo(todos.getNumber());
-        todoResponse.setPageSize(todos.getSize());
-        todoResponse.setTotalElements(todos.getTotalElements());
-        todoResponse.setTotalPages(todos.getTotalPages());
-        todoResponse.setLast(todos.isLast());
-
-        return todoResponse;
     }
 
     public List<TodoDto> getTodosByRoomId(Integer roomId) {
         // see if room exists
         roomRepository.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Room","id",roomId));
 
-        // retrieve todos by roomId
-        List<Todo> todos = todoRepository.findByRoomId(roomId);
+        // retrieve users by roomId
+        List<User> users = userRepository.findByRoomId(roomId);
+
+        // retrieve todos by userId
+        List<Todo> todos = new ArrayList<>();
+        for(User user : users) {
+            todos.addAll(todoRepository.findByUserId(user.getId()));
+        }
 
         // convert list of todos to list of todo dtos
         List<TodoDto> todoDtos = todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
@@ -390,7 +254,7 @@ public class TodoServiceImpl implements TodoService {
         // convert set of todoUserMaps to set of assignedUserIds
         for(TodoDto todoDto : todoDtos) {
             Set<Integer> newAssignedUserIds = new HashSet<>();
-            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+            List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
             for(TodoUserMap todoUserMap : todoUserMaps) {
                 newAssignedUserIds.add(todoUserMap.getUser().getId());
             }
@@ -399,20 +263,12 @@ public class TodoServiceImpl implements TodoService {
         return todoDtos;
     }
 
-    public List<TodoDto> getTodosByRoomIdAndUserId(Integer roomId, Integer userId) {
-        // see if room exists
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Room","id",roomId));
-
+    public List<TodoDto> getTodosByUserId(Integer userId) {
         // see if user exists
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User","id",userId));
 
-        // check if the user belongs to the room
-        if (!user.getRoom().getId().equals(room.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The user does not belong to the room");
-        }
-
         // retrieve todos by roomId
-        List<Todo> todos = todoRepository.findByRoomIdAndUserId(roomId, userId);
+        List<Todo> todos = todoRepository.findByUserId(userId);
 
         // convert list of todos to list of todo dtos
         List<TodoDto> todoDtos = todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
@@ -420,7 +276,7 @@ public class TodoServiceImpl implements TodoService {
         // convert set of todoUserMaps to set of assignedUserIds
         for(TodoDto todoDto : todoDtos) {
             Set<Integer> newAssignedUserIds = new HashSet<>();
-            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+            List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
             for(TodoUserMap todoUserMap : todoUserMaps) {
                 newAssignedUserIds.add(todoUserMap.getUser().getId());
             }
@@ -430,15 +286,16 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public TodoDto getTodoById(Integer roomId, Integer userId, Integer id) {
+    public TodoDto getTodoById(Integer id) {
 
-        Todo todo = validateTodoOwnership(roomId, userId, id);
+        // retrieve todo entity by id
+        Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
         TodoDto todoDto = mapToDTO(todo);
 
         // convert set of todoUserMaps to set of assignedUserIds
         Set<Integer> newAssignedUserIds = new HashSet<>();
-        Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+        List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(id);
         for(TodoUserMap todoUserMap : todoUserMaps) {
             newAssignedUserIds.add(todoUserMap.getUser().getId());
         }
@@ -448,23 +305,35 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public TodoDto updateTodo(TodoDto todoDto, Integer roomId, Integer userId, Integer id) {
+    public TodoDto updateTodo(TodoDto todoDto, Integer id) {
 
-        Todo todo = validateTodoOwnership(roomId, userId, id);
+        // retrieve user entity by id
+        User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
+
+        // retrieve todo entity by id
+        Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
+
+        // check if the todo belongs to the user
+        if (!todo.getUser().getId().equals(user.getId())) {
+            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
+        }
 
         // update todo using todoDto
-        if (todoDto.getStartDateTime() != null) todo.setStartDateTime(todoDto.getStartDateTime());
-        if (todoDto.getEndDateTime() != null) todo.setEndDateTime(todoDto.getEndDateTime());
+        if (todoDto.getStartTime() != null) todo.setStartTime(todoDto.getStartTime());
+        if (todoDto.getEndTime() != null) todo.setEndTime(todoDto.getEndTime());
         // check if todo has a valid date range
-        if (todo.getStartDateTime().isAfter(todo.getEndDateTime())) {
+        if (todo.getStartTime().isAfter(todo.getEndTime())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The start date cannot be later than the end date. Please enter a valid date range.");
         }
 
         if (todoDto.getTitle() != null) todo.setTitle(todoDto.getTitle());
         if (todoDto.getDescription() != null) todo.setDescription(todoDto.getDescription());
         if (todoDto.getStatus() != null) todo.setStatus(Todo.Status.valueOf(todoDto.getStatus()));
-        todo.setRepeatType(RepeatType.NONE);
-        todo.setRepeatGroupId(null);
+        if (todoDto.getRepeatEndTime() != null) throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The repeatEndTime for a single todo cannot be changed");
+        if (todoDto.getRepeatType() != null) {
+            todo.setRepeatType(RepeatType.NONE);
+            todo.setRepeatGroupId(null);
+        }
 
         // save updated todo
         Todo updatedTodo = todoRepository.save(todo);
@@ -474,7 +343,7 @@ public class TodoServiceImpl implements TodoService {
         // assignedUserIds에 변경사항 있을 시
         if (todoDto.getAssignedUserIds() != null || (todoDto.getRandomUsersNum() != null && !todoDto.getRandomUsersNum().equals(0))) {
             // 기존 todo - user 맵핑 제거
-            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
             todoUserMapRepository.deleteAll(todoUserMaps);
 
             List<TodoUserMap> newTodoUserMaps = new ArrayList<>();
@@ -487,7 +356,7 @@ public class TodoServiceImpl implements TodoService {
                     // retrieve user entity by id
                     User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User","id",uid));
                     // check if the assignedUser belongs to the room
-                    if (!assignedUser.getRoom().getId().equals(todo.getRoom().getId())) {
+                    if (!assignedUser.getRoom().getId().equals(user.getRoom().getId())) {
                         throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
                     }
                     todoUserMap.setUser(assignedUser);
@@ -498,7 +367,7 @@ public class TodoServiceImpl implements TodoService {
                 // assign user ramdomly
                 // numRandomUsers & random -> todoId - userId mapping
                 Integer randomUsersNum = todoDto.getRandomUsersNum();
-                List<User> users = userRepository.findByRoomId(todo.getRoom().getId());
+                List<User> users = userRepository.findByRoomId(user.getRoom().getId());
 
                 for (int j=1;j<=randomUsersNum;j++) {
                     Random random = new Random();
@@ -526,7 +395,7 @@ public class TodoServiceImpl implements TodoService {
 
         }
         else {
-            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
             Set<Integer> newAssignedUserIds = new HashSet<>();
 
             for(TodoUserMap todoUserMap : todoUserMaps) {
@@ -539,30 +408,24 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public List<TodoDto> updateTodosByRepeatId(TodoDto todoDto, Integer roomId, Integer userId, Integer id) {
-
-        // retrieve room entity by id
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Room","id",roomId));
+    public List<TodoDto> updateTodos(TodoDto todoDto, Integer id) {
 
         // retrieve user entity by id
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User","id",userId));
+        User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
 
         // retrieve todo entity by id
         Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
-        // check if the todo belongs to the room and user
-        if (!todo.getRoom().getId().equals(room.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the room");
-        }
-        else if (!todo.getUser().getId().equals(user.getId())) {
+        // check if the todo belongs to the user
+        if (!todo.getUser().getId().equals(user.getId())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
         }
 
         // 변경되지 않은 필드는 todo 필드값을 todoDto에 넣어줌
-        if (todoDto.getStartDateTime() == null) todoDto.setStartDateTime(todo.getStartDateTime());
-        if (todoDto.getEndDateTime() == null) todoDto.setEndDateTime(todo.getEndDateTime());
+        if (todoDto.getStartTime() == null) todoDto.setStartTime(todo.getStartTime());
+        if (todoDto.getEndTime() == null) todoDto.setEndTime(todo.getEndTime());
         // check if todo has a valid date range
-        if (todoDto.getStartDateTime().isAfter(todoDto.getEndDateTime())) {
+        if (todoDto.getStartTime().isAfter(todoDto.getEndTime())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The start date cannot be later than the end date. Please enter a valid date range.");
         }
 
@@ -575,14 +438,14 @@ public class TodoServiceImpl implements TodoService {
         }
         else System.out.println(todoDto.getStatus());
 
-        if (todoDto.getRepeatEndDateTime() == null) todoDto.setRepeatEndDateTime(todo.getRepeatEndDateTime());
+        if (todoDto.getRepeatEndTime() == null) todoDto.setRepeatEndTime(todo.getRepeatEndTime());
         if (todoDto.getRepeatType() == null) todoDto.setRepeatType(todo.getRepeatType().toString());
 
         // todoDto.getAssignedUserIds()와 todoDto.getRandomUsersNum()가 둘 다 null이면
         // 기존 parentTodo의 id에 해당하는 기존 todoUserMap을 가져와서 todoDto에 setAssignedUserIds
         // todo를 DB에서 지우면 해당 toddmap도 삭제되므로 todo를 지우기 전에 가져오기
         if (todoDto.getAssignedUserIds() == null && todoDto.getRandomUsersNum() == null) {
-            Set<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
+            List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todo.getId());
             Set<Integer> newAssignedUserIds = new HashSet<>();
 
             for(TodoUserMap todoUserMap : todoUserMaps) {
@@ -596,14 +459,13 @@ public class TodoServiceImpl implements TodoService {
             if (todo.getRepeatGroupId() != null) repeatGroupId = todo.getRepeatGroupId();
             List<Todo> oldTodos = todoRepository.findByRepeatGroupId(repeatGroupId);
             for(Todo t : oldTodos) {
-                if(t.getStartDateTime().isAfter(todo.getStartDateTime()))
+                if(t.getStartTime().isAfter(todo.getStartTime()))
                     todoRepository.delete(t);
             }
         }
         todoRepository.delete(todo);
 
         Todo pTodo = mapToModel(todoDto);
-        pTodo.setRoom(room);
         pTodo.setUser(user);
         Todo parentTodo = todoRepository.save(pTodo);
 
@@ -611,16 +473,16 @@ public class TodoServiceImpl implements TodoService {
 
         switch (todoDto.getRepeatType()) {
             case "DAILY":
-                newTodos = createDailyTodos(room, user, todoDto, parentTodo);
+                newTodos = createDailyTodos(user, todoDto, parentTodo);
                 break;
             case "WEEKLY":
-                newTodos = createWeeklyTodos(room, user, todoDto, parentTodo);
+                newTodos = createWeeklyTodos(user, todoDto, parentTodo);
                 break;
             case "MONTHLY":
-                newTodos = createMonthlyTodos(room, user, todoDto, parentTodo);
+                newTodos = createMonthlyTodos(user, todoDto, parentTodo);
                 break;
             case "YEARLY":
-                newTodos = createYearlyTodos(room, user, todoDto, parentTodo);
+                newTodos = createYearlyTodos(user, todoDto, parentTodo);
                 break;
             default:
                 newTodos.add(parentTodo);
@@ -629,7 +491,6 @@ public class TodoServiceImpl implements TodoService {
 
         // convert list of todos to list of todo dtos
         List<TodoDto> newTodoDtos = newTodos.stream().map(newTodo -> mapToDTO(newTodo)).collect(Collectors.toList());
-
 
 
         // random값 없을 때
@@ -644,7 +505,7 @@ public class TodoServiceImpl implements TodoService {
                     // retrieve user entity by id
                     User assignedUser = userRepository.findById(uid).orElseThrow(() -> new ResourceNotFoundException("User", "id", uid));
                     // check if the assignedUser belongs to the room
-                    if (!assignedUser.getRoom().getId().equals(room.getId())) {
+                    if (!assignedUser.getRoom().getId().equals(user.getRoom().getId())) {
                         throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The assigned user does not belong to the room");
                     }
                     todoUserMap.setUser(assignedUser);
@@ -669,7 +530,7 @@ public class TodoServiceImpl implements TodoService {
 
             int i=0;
             for(Todo newTodo : newTodos) {
-                List<User> users = userRepository.findByRoomId(room.getId());
+                List<User> users = userRepository.findByRoomId(user.getRoom().getId());
                 List<TodoUserMap> todoUserMaps = new ArrayList<>();
                 for (int j=1;j<=randomUsersNum;j++) {
                     Random random = new Random();
@@ -700,26 +561,19 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public TodoDto updateTodoStatus(TodoDto todoDto, Integer roomId, Integer userId, Integer id) {
-        Todo todo = validateTodoOwnership(roomId, userId, id);
-        todo.setStatus(Todo.Status.valueOf(todoDto.getStatus()));
-        // save updated todo to DB
-        Todo updatedTodo = todoRepository.save(todo);
-        return mapToDTO(updatedTodo);
-    }
+    public void deleteTodo(Integer id) {
 
-    @Override
-    public void deleteTodo(Integer roomId, Integer userId, Integer id) {
-
-        Todo todo = validateTodoOwnership(roomId, userId, id);
+        // retrieve todo entity by id
+        Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
         todoRepository.delete(todo);
     }
 
     @Override
-    public void deleteTodosByRepeatId(Integer roomId, Integer userId, Integer id) {
+    public void deleteTodos(Integer id) {
 
-        Todo todo = validateTodoOwnership(roomId, userId, id);
+        // retrieve todo entity by id
+        Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
         if(todo.getRepeatType().equals(RepeatType.NONE)) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo is not repeating");
@@ -728,7 +582,7 @@ public class TodoServiceImpl implements TodoService {
         if (todo.getRepeatGroupId() != null) repeatGroupId = todo.getRepeatGroupId();
         List<Todo> oldTodos = todoRepository.findByRepeatGroupId(repeatGroupId);
         for(Todo t : oldTodos) {
-            if(t.getStartDateTime().isAfter(todo.getStartDateTime()))
+            if(t.getStartTime().isAfter(todo.getStartTime()))
                 todoRepository.delete(t);
         }
         todoRepository.delete(todo);
