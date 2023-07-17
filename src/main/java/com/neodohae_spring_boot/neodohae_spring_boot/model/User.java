@@ -31,7 +31,7 @@ public class User {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender")
+    @Column(name = "gender", columnDefinition = "ENUM('MALE','FEMALE','UNDEFINED')")
     private Gender gender = Gender.UNDEFINED;
 
     @Column(name = "birthYear")

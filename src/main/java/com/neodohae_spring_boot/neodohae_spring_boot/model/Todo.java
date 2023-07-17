@@ -33,7 +33,7 @@ public class Todo {
     private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", columnDefinition = "ENUM('TODO','DOING','DONE')")
     private Status status = Status.TODO;
 
     @Column(name = "repeatGroupId")
@@ -43,20 +43,20 @@ public class Todo {
     private LocalDateTime repeatEndTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "repeatType")
+    @Column(name = "repeatType", columnDefinition = "ENUM('NONE','DAILY','WEEKLY','MONTHLY','YEARLY')")
     private RepeatType repeatType = RepeatType.NONE;
 
     @CreatedDate
-    @Column(name = "createdAt", updatable = false)
+    @Column(name = "createdAt", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(name = "updatedAt")
+    @Column(name = "updatedAt", nullable = false)
     private LocalDateTime updatedAt;
 
     // multiple todos to one user
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "userId")
+    @JoinColumn(name = "userId", nullable = false) // TODO: nullable = false로 EDIT한거 말하기
     private User user;
 
     @OneToMany(mappedBy = "todo", cascade = CascadeType.REMOVE, orphanRemoval = true)

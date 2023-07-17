@@ -19,11 +19,11 @@ public class TodoDto {
     private LocalDateTime startTime;
     @NotNull
     private LocalDateTime endTime;
-    @NotEmpty
+
     private String status;
+
     private Integer repeatGroupId;
     private LocalDateTime repeatEndTime;
-    @NotEmpty
     private String repeatType;
 
     private Set<Integer> assignedUserIds;

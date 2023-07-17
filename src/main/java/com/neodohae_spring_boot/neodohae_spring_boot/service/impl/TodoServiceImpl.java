@@ -138,6 +138,8 @@ public class TodoServiceImpl implements TodoService {
         }
 
         if (todoDto.getRepeatEndTime() == null) todoDto.setRepeatEndTime(LocalDateTime.parse("2030-01-01T12:00:00"));
+        if (todoDto.getStatus() == null) todoDto.setStatus("TODO");
+        if (todoDto.getRepeatType() == null) todoDto.setRepeatType("NONE");
 
         Todo pTodo = mapToModel(todoDto);
         pTodo.setUser(user);
@@ -263,12 +265,20 @@ public class TodoServiceImpl implements TodoService {
         return todoDtos;
     }
 
+    // TODO: assignedId 기반으로 todo 호출 필요
     public List<TodoDto> getTodosByUserId(Integer userId) {
         // see if user exists
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User","id",userId));
 
-        // retrieve todos by roomId
-        List<Todo> todos = todoRepository.findByUserId(userId);
+        // retrieve todoUserMaps by userId
+        List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByUserId(userId);
+
+        // retrieve todos by todoIds from todoUserMaps
+        List<Todo> todos = new ArrayList<>();
+        for(TodoUserMap todoUserMap : todoUserMaps) {
+            Todo todo = todoRepository.findById(todoUserMap.getTodo().getId()).orElseThrow(() -> new ResourceNotFoundException("Todo","id",todoUserMap.getTodo().getId()));
+            todos.add(todo);
+        }
 
         // convert list of todos to list of todo dtos
         List<TodoDto> todoDtos = todos.stream().map(todo -> mapToDTO(todo)).collect(Collectors.toList());
@@ -276,8 +286,8 @@ public class TodoServiceImpl implements TodoService {
         // convert set of todoUserMaps to set of assignedUserIds
         for(TodoDto todoDto : todoDtos) {
             Set<Integer> newAssignedUserIds = new HashSet<>();
-            List<TodoUserMap> todoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
-            for(TodoUserMap todoUserMap : todoUserMaps) {
+            List<TodoUserMap> newTodoUserMaps = todoUserMapRepository.findByTodoId(todoDto.getId());
+            for(TodoUserMap todoUserMap : newTodoUserMaps) {
                 newAssignedUserIds.add(todoUserMap.getUser().getId());
             }
             todoDto.setAssignedUserIds(newAssignedUserIds);
@@ -308,15 +318,18 @@ public class TodoServiceImpl implements TodoService {
     public TodoDto updateTodo(TodoDto todoDto, Integer id) {
 
         // retrieve user entity by id
-        User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
+        // TODO: findByTodoId?
+        //User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
 
         // retrieve todo entity by id
         Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
+        User user = userRepository.findById(todo.getUser().getId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todo.getUser().getId()));
+
         // check if the todo belongs to the user
-        if (!todo.getUser().getId().equals(user.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
-        }
+        //if (!todo.getUser().getId().equals(user.getId())) {
+        //    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
+        //}
 
         // update todo using todoDto
         if (todoDto.getStartTime() != null) todo.setStartTime(todoDto.getStartTime());
@@ -411,15 +424,18 @@ public class TodoServiceImpl implements TodoService {
     public List<TodoDto> updateTodos(TodoDto todoDto, Integer id) {
 
         // retrieve user entity by id
-        User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
+        // TODO: findByTodoId?
+        // User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
 
         // retrieve todo entity by id
         Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
+        User user = userRepository.findById(todo.getUser().getId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todo.getUser().getId()));
+
         // check if the todo belongs to the user
-        if (!todo.getUser().getId().equals(user.getId())) {
-            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
-        }
+        //if (!todo.getUser().getId().equals(user.getId())) {
+        //    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
+        //}
 
         // 변경되지 않은 필드는 todo 필드값을 todoDto에 넣어줌
         if (todoDto.getStartTime() == null) todoDto.setStartTime(todo.getStartTime());
