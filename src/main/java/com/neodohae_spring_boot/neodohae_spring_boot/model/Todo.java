@@ -56,7 +56,7 @@ public class Todo {
 
     // multiple todos to one user
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "userId", nullable = false) // TODO: nullable = false로 EDIT한거 말하기
+    @JoinColumn(name = "userId", nullable = false)
     private User user;
 
     @OneToMany(mappedBy = "todo", cascade = CascadeType.REMOVE, orphanRemoval = true)

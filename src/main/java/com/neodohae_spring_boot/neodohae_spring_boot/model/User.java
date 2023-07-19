@@ -31,11 +31,11 @@ public class User {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender", columnDefinition = "ENUM('MALE','FEMALE','UNDEFINED')")
-    private Gender gender = Gender.UNDEFINED;
+    @Column(name = "gender", columnDefinition = "ENUM('male','female','undefined')")
+    private Gender gender = Gender.undefined;
 
     @Column(name = "birthYear")
-    private int birthYear;
+    private Integer birthYear;
 
     @Column(name = "picture")
     private String picture;
@@ -61,7 +61,7 @@ public class User {
 }
 
 enum Gender {
-    MALE,
-    FEMALE,
-    UNDEFINED
+    male,
+    female,
+    undefined
 }
