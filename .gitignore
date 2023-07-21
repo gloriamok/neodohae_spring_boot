@@ -65,6 +65,12 @@ buildNumber.properties
 # macOS files
 .DS_Store
 
+# env files
 **/env.properties
+
+# yaml files
+deployment.yaml
+service.yaml
+hpa.yaml
 
 # End of https://www.gitignore.io/api/java,spring-boot,intellij,gradle,eclipse
