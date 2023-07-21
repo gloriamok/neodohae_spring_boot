@@ -14,6 +14,6 @@ WORKDIR /app
 
 COPY /src/main/resources/env.properties /app/env.properties
 
-COPY --from=build /home/gradle/build/libs/*.jar /app/neodohae_spring_boot.jar
+COPY --from=build /home/gradle/build/libs/neodohae_spring_boot-0.0.1-SNAPSHOT.jar /app/neodohae_spring_boot.jar
 
 ENTRYPOINT ["java", "-jar", "neodohae_spring_boot.jar"]
