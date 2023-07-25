@@ -15,6 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+
+import java.util.List;
 
 
 @Configuration
@@ -48,7 +51,15 @@ public class SecurityConfig {
     // SecurityFilterChain은 Spring Security에서 HTTP 요청을 처리하는 필터들의 체인
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
+        http
+                .cors().configurationSource(request -> {
+                        CorsConfiguration cors = new CorsConfiguration();
+                        cors.applyPermitDefaultValues();
+                        cors.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+                        return cors;
+                })
+                .and()
+                .csrf().disable()
                 .authorizeHttpRequests((authorize) ->
                         authorize.requestMatchers("/swagger-ui/**").permitAll()
                                 .requestMatchers("/v3/api-docs/**").permitAll()
