@@ -20,8 +20,7 @@ public class JwtTokenProvider {
     private String jwtSecret;
 
     private Key key() {
-        return Keys.hmacShaKeyFor(
-                Decoders.BASE64.decode(jwtSecret));
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
     // get username from JWT token
