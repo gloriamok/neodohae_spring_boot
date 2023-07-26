@@ -13,6 +13,7 @@ import com.neodohae_spring_boot.neodohae_spring_boot.repository.UserRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.repository.TodoUserMapRepository;
 import com.neodohae_spring_boot.neodohae_spring_boot.service.TodoService;
 import org.modelmapper.ModelMapper;
+import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -243,10 +244,13 @@ public class TodoServiceImpl implements TodoService {
         // retrieve users by roomId
         List<User> users = userRepository.findByRoomId(roomId);
 
-        // retrieve todos by userId
+        // retrieve todos by userId and by current month
         List<Todo> todos = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime endOfMonth = now.withDayOfMonth(now.toLocalDate().lengthOfMonth()).withHour(23).withMinute(59).withSecond(59).withNano(999999999);
         for(User user : users) {
-            todos.addAll(todoRepository.findByUserId(user.getId()));
+            todos.addAll(todoRepository.findTodosForCurrentMonth(user.getId(), startOfMonth, endOfMonth));
         }
 
         // convert list of todos to list of todo dtos
