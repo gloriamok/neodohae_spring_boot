@@ -4,7 +4,6 @@ import com.neodohae_spring_boot.neodohae_spring_boot.dto.TodoDto;
 import com.neodohae_spring_boot.neodohae_spring_boot.exception.ResourceNotFoundException;
 import com.neodohae_spring_boot.neodohae_spring_boot.exception.TodoAPIException;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.Todo.RepeatType;
-import com.neodohae_spring_boot.neodohae_spring_boot.model.Room;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.Todo;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.User;
 import com.neodohae_spring_boot.neodohae_spring_boot.model.TodoUserMap;
@@ -317,19 +316,10 @@ public class TodoServiceImpl implements TodoService {
     @Override
     public TodoDto updateTodo(TodoDto todoDto, Integer id) {
 
-        // retrieve user entity by id
-        // TODO: findByTodoId?
-        //User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
-
         // retrieve todo entity by id
         Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
         User user = userRepository.findById(todo.getUser().getId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todo.getUser().getId()));
-
-        // check if the todo belongs to the user
-        //if (!todo.getUser().getId().equals(user.getId())) {
-        //    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
-        //}
 
         // update todo using todoDto
         if (todoDto.getStartTime() != null) todo.setStartTime(todoDto.getStartTime());
@@ -342,10 +332,13 @@ public class TodoServiceImpl implements TodoService {
         if (todoDto.getTitle() != null) todo.setTitle(todoDto.getTitle());
         if (todoDto.getDescription() != null) todo.setDescription(todoDto.getDescription());
         if (todoDto.getStatus() != null) todo.setStatus(Todo.Status.valueOf(todoDto.getStatus()));
-        if (todoDto.getRepeatEndTime() != null) throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The repeatEndTime for a single todo cannot be changed");
+        if (todoDto.getRepeatEndTime() != null) todo.setRepeatEndTime(todoDto.getRepeatEndTime());
         if (todoDto.getRepeatType() != null) {
-            todo.setRepeatType(RepeatType.NONE);
-            todo.setRepeatGroupId(null);
+            if (todoDto.getRepeatType().equals("NONE")) {
+                todo.setRepeatType(RepeatType.NONE);
+                todo.setRepeatGroupId(null);
+            }
+            else todo.setRepeatType(RepeatType.valueOf(todoDto.getRepeatType()));
         }
 
         // save updated todo
@@ -423,19 +416,10 @@ public class TodoServiceImpl implements TodoService {
     @Override
     public List<TodoDto> updateTodos(TodoDto todoDto, Integer id) {
 
-        // retrieve user entity by id
-        // TODO: findByTodoId?
-        // User user = userRepository.findById(todoDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todoDto.getUserId()));
-
         // retrieve todo entity by id
         Todo todo = todoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Todo","id",id));
 
         User user = userRepository.findById(todo.getUser().getId()).orElseThrow(() -> new ResourceNotFoundException("User","id", todo.getUser().getId()));
-
-        // check if the todo belongs to the user
-        //if (!todo.getUser().getId().equals(user.getId())) {
-        //    throw new TodoAPIException(HttpStatus.BAD_REQUEST, "The todo does not belong to the user");
-        //}
 
         // 변경되지 않은 필드는 todo 필드값을 todoDto에 넣어줌
         if (todoDto.getStartTime() == null) todoDto.setStartTime(todo.getStartTime());
@@ -448,10 +432,7 @@ public class TodoServiceImpl implements TodoService {
         if (todoDto.getTitle() == null) todoDto.setTitle(todo.getTitle());
         if (todoDto.getDescription() == null) todoDto.setDescription(todo.getDescription());
         // 확인
-        if (todoDto.getStatus() == null) {
-            System.out.println("TODODTO NULL");
-            todoDto.setStatus(todo.getStatus().toString());
-        }
+        if (todoDto.getStatus() == null) todoDto.setStatus(todo.getStatus().toString());
         else System.out.println(todoDto.getStatus());
 
         if (todoDto.getRepeatEndTime() == null) todoDto.setRepeatEndTime(todo.getRepeatEndTime());
