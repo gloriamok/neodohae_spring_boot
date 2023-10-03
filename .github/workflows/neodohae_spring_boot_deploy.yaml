@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REGISTRY: 076831690411.dkr.ecr.ap-northeast-2.amazonaws.com
+  ECR_REGISTRY: 104652258306.dkr.ecr.ap-northeast-2.amazonaws.com
   ECR_REPOSITORY: neodohae_spring_boot
 
 jobs:
@@ -43,28 +43,46 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-    - name: Checkout neodohae_helm_charts repository
-      uses: actions/checkout@v2
-      with:
-        repository: peterhyun1234/neodohae_helm_charts
-        persist-credentials: false
-        fetch-depth: 0
-
-    - name: Install yq
+    - name: Install and configure AWS CLI
       run: |
-        sudo wget -O /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64
-        sudo chmod +x /usr/bin/yq
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install --update
 
-    - name: Update values.yaml and push to repository
+    - name: Deploy to EKS
       env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
+        EKS_CLUSTER_NAME: peter
+        DEPLOYMENT_NAME: neodohae-spring-boot-deployment
+        CONTAINER_NAME: neodohae-spring-boot
       run: |
-        yq e ".image.tag = env(IMAGE_TAG)" -i neodohae_spring_boot/values.yaml
-        cat neodohae_spring_boot/values.yaml
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+        kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} ${{ env.CONTAINER_NAME }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 
-        git config --global user.name 'peter jeon'
-        git config --global user.email 'peterhyun1234@gmail.com'
+    # TODO: Use when applying argoCD
+    # - name: Checkout neodohae_helm_charts repository
+    #   uses: actions/checkout@v2
+    #   with:
+    #     repository: peterhyun1234/neodohae_helm_charts
+    #     persist-credentials: false
+    #     fetch-depth: 0
 
-        git add .
-        git commit -m "feat: update image tag to ${IMAGE_TAG}" || echo "No changes to commit"
-        git push https://${{ secrets.PAT }}@github.com/peterhyun1234/neodohae_helm_charts.git
+    # - name: Install yq
+    #   run: |
+    #     sudo wget -O /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64
+    #     sudo chmod +x /usr/bin/yq
+
+    # - name: Update values.yaml and push to repository
+    #   env:
+    #     IMAGE_TAG: ${{ github.sha }}
+    #   run: |
+    #     yq e ".image.tag = env(IMAGE_TAG)" -i neodohae_spring_boot/values.yaml
+    #     cat neodohae_spring_boot/values.yaml
+
+    #     git config --global user.name 'peter jeon'
+    #     git config --global user.email 'peterhyun1234@gmail.com'
+
+    #     git add .
+    #     git commit -m "feat: update image tag to ${IMAGE_TAG}" || echo "No changes to commit"
+    #     git push https://${{ secrets.PAT }}@github.com/peterhyun1234/neodohae_helm_charts.git
